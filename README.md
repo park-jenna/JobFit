@@ -1,36 +1,107 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# JobFit — Semantic Job Description & Resume Matching
 
-## Getting Started
+JobFit is a lightweight analysis tool that compares a job description with a resume to estimate how well a candidate matches a role.
 
-First, run the development server:
+Instead of relying only on keyword overlap, JobFit combines semantic similarity, skill-level matching, and structured LLM reasoning to surface meaningful strengths and gaps.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+---
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Core Ideas & Design Decisions
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 1. Semantic similarity beyond keywords
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Computes embeddings for:
+- the entire job description
+- the entire resume
 
-## Learn More
+Cosine similarity is used to measure how closely the *meaning* of the two texts align, even when exact keywords differ.
 
-To learn more about Next.js, take a look at the following resources:
+This helps capture real relevance that keyword matching often misses.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 2. Skill matching as a separate, interpretable signal
 
-## Deploy on Vercel
+Extracts:
+- required skills
+- preferred skills
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+from the job description and compares them against skills extracted from the resume.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+This produces:
+- required skill match score
+- preferred skill match score
+- explicit lists of missing skills
+
+---
+
+### 3. Weighted scoring instead of a single opaque number
+
+Computes multiple signals before producing a final score:
+
+- semantic score (embedding-based)
+- skill score (weighted required + preferred)
+- final match score (blend of semantic and skill scores)
+
+This design allows future tuning and avoids hiding logic behind a single metric.
+
+---
+
+### 4. Structured LLM summaries for human-readable insight
+
+After numeric scoring, generates a structured summary including:
+- key strengths
+- notable gaps
+- overall fit assessment
+
+The output is JSON-based to support future visualization and recommendation features.
+
+---
+
+## Current Features
+
+- Semantic similarity using text embeddings
+- Skill extraction from job descriptions and resumes
+- Required vs preferred skill breakdown
+- Weighted match score
+- AI-generated summary (strengths, gaps, overall fit)
+- Modular backend architecture
+
+---
+
+## Tech Stack
+
+- Next.js (App Router)
+- TypeScript
+- OpenAI API
+  - embeddings for semantic similarity
+  - LLMs for skill extraction and summaries
+- Tailwind CSS
+- PDF parsing for resume ingestion
+
+---
+
+## Project Structure (Simplified)
+
+src/
+├── app/
+│   ├── api/analyze/route.ts   # analysis pipeline
+│   ├── analyze/               # JD + resume input
+│   └── result/                # result visualization
+├── lib/
+│   ├── embeddings.ts          # embedding utilities
+│   ├── similarity.ts          # cosine similarity helpers
+│   └── weightedScore.ts       # scoring logic
+├── services/
+│   ├── jdAnalyzer.ts          # JD skill extraction
+│   ├── resumeAnalyzer.ts      # resume skill extraction
+│   └── summary.ts             # AI summary generation
+
+## To be Added 
+
+- Skill importance weighting from job descriptions
+- Gap severity ranking
+- Resume tailoring recommendations
+- Interactive skill coverage visualizations
+- Persisting embeddings for faster comparisons
+
