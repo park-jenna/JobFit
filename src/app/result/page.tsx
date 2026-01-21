@@ -149,17 +149,23 @@ export default function ResultPage() {
         </aside>
 
         <section className="space-y-6 lg:min-h-0 lg:overflow-y-auto lg:pr-2">
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div
+            className="rounded-2xl border p-6 shadow-sm"
+            style={{ borderColor: "var(--border)", backgroundColor: "var(--card)" }}
+          >
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
-                  Overall Summary
+                <p className="text-xs uppercase tracking-[0.2em]" style={{ color: "var(--muted)" }}>
+                  Summary
                 </p>
-                <h2 className="mt-2 text-lg font-semibold text-slate-900">
-                  Fit snapshot
+                <h2 className="mt-2 text-lg font-semibold" style={{ color: "var(--foreground)" }}>
+                  Your fit assessment
                 </h2>
               </div>
-              <div className="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-900">
+              <div
+                className="rounded-full px-3 py-1 text-xs font-medium"
+                style={{ backgroundColor: "var(--accent)", color: "#0f1117" }}
+              >
                 Level {result?.jdAnalysis?.level ?? "--"}
               </div>
             </div>
@@ -167,52 +173,55 @@ export default function ResultPage() {
             {result?.aiSummary ? (
               <div className="mt-4 grid gap-4 lg:grid-cols-[1.2fr_1fr]">
                 <div>
-                  <p className="text-sm font-medium text-slate-700">
+                  <p className="text-sm font-medium" style={{ color: "var(--foreground)" }}>
                     Strengths
                   </p>
-                  <ul className="mt-2 list-disc pl-5 text-sm text-slate-600">
+                  <ul className="mt-2 list-disc pl-5 text-sm" style={{ color: "var(--muted)" }}>
                     {result.aiSummary.strengths.map((s) => (
                       <li key={s}>{s}</li>
                     ))}
                   </ul>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-slate-700">Gaps</p>
-                  <ul className="mt-2 list-disc pl-5 text-sm text-slate-600">
+                  <p className="text-sm font-medium" style={{ color: "var(--foreground)" }}>Gaps</p>
+                  <ul className="mt-2 list-disc pl-5 text-sm" style={{ color: "var(--muted)" }}>
                     {result.aiSummary.gaps.map((s) => (
                       <li key={s}>{s}</li>
                     ))}
                   </ul>
                 </div>
-                <p className="text-sm text-slate-600 lg:col-span-2">
+                <p className="text-sm lg:col-span-2" style={{ color: "var(--muted)" }}>
                   Overall Fit:{" "}
-                  <span className="font-medium text-slate-800">
+                  <span className="font-medium" style={{ color: "var(--foreground)" }}>
                     {result.aiSummary.overallFit}
                   </span>
                 </p>
               </div>
             ) : (
-              <p className="mt-4 text-sm text-slate-500">
+              <p className="mt-4 text-sm" style={{ color: "var(--muted)" }}>
                 No AI summary available yet.
               </p>
             )}
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
+          <div
+            className="rounded-2xl border p-6 shadow-sm"
+            style={{ borderColor: "var(--border)", backgroundColor: "var(--card)" }}
+          >
+            <p className="text-xs uppercase tracking-[0.2em]" style={{ color: "var(--muted)" }}>
               Required Skills
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
               {required.length ? (
                 required.map((skill) => <SkillTag key={skill} label={skill} />)
               ) : (
-                <span className="text-sm text-slate-500">
+                <span className="text-sm" style={{ color: "var(--muted)" }}>
                   No required skills extracted
                 </span>
               )}
             </div>
             <div className="mt-4">
-              <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
+              <p className="text-xs uppercase tracking-[0.2em]" style={{ color: "var(--muted)" }}>
                 Missing
               </p>
               <div className="mt-2 flex flex-wrap gap-2">
@@ -221,27 +230,30 @@ export default function ResultPage() {
                     <SkillTag key={skill} label={skill} variant="missing" />
                   ))
                 ) : (
-                  <span className="text-sm text-slate-500">None</span>
+                  <span className="text-sm" style={{ color: "var(--muted)" }}>None</span>
                 )}
               </div>
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
+          <div
+            className="rounded-2xl border p-6 shadow-sm"
+            style={{ borderColor: "var(--border)", backgroundColor: "var(--card)" }}
+          >
+            <p className="text-xs uppercase tracking-[0.2em]" style={{ color: "var(--muted)" }}>
               Preferred Skills
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
               {preferred.length ? (
                 preferred.map((skill) => <SkillTag key={skill} label={skill} />)
               ) : (
-                <span className="text-sm text-slate-500">
+                <span className="text-sm" style={{ color: "var(--muted)" }}>
                   No preferred skills extracted
                 </span>
               )}
             </div>
             <div className="mt-4">
-              <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
+              <p className="text-xs uppercase tracking-[0.2em]" style={{ color: "var(--muted)" }}>
                 Missing
               </p>
               <div className="mt-2 flex flex-wrap gap-2">
@@ -250,24 +262,25 @@ export default function ResultPage() {
                     <SkillTag key={skill} label={skill} variant="missing" />
                   ))
                 ) : (
-                  <span className="text-sm text-slate-500">None</span>
+                  <span className="text-sm" style={{ color: "var(--muted)" }}>None</span>
                 )}
               </div>
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
-              Semantic Explanation
+          <div
+            className="rounded-2xl border p-6 shadow-sm"
+            style={{ borderColor: "var(--border)", backgroundColor: "var(--card)" }}
+          >
+            <p className="text-xs uppercase tracking-[0.2em]" style={{ color: "var(--muted)" }}>
+              How Semantic Scoring Works
             </p>
-            <p className="mt-3 text-sm text-slate-600">
-              The semantic score captures how closely your resume language
-              aligns with the role, beyond keyword matches. A higher score means
-              your experience tells a similar story to the job description.
+            <p className="mt-3 text-sm" style={{ color: "var(--muted)" }}>
+              Beyond keywords, we measure how closely your resume language aligns with the role's context. Higher scores mean your experience tells a similar story to the job description.
             </p>
-            <p className="mt-3 text-sm text-slate-600">
-              Current semantic score:{" "}
-              <span className="font-medium text-slate-800">
+            <p className="mt-3 text-sm" style={{ color: "var(--muted)" }}>
+              Your score:{" "}
+              <span className="font-medium" style={{ color: "var(--accent)" }}>
                 {typeof result?.semanticScore === "number"
                   ? `${result.semanticScore}%`
                   : "--"}
@@ -276,7 +289,11 @@ export default function ResultPage() {
           </div>
 
           <div>
-            <a href="/analyze" className="text-sm underline text-slate-600">
+            <a
+              href="/analyze"
+              className="text-sm underline transition-colors hover:opacity-80"
+              style={{ color: "var(--accent)" }}
+            >
               Back to Analyze
             </a>
           </div>
