@@ -7,20 +7,19 @@ import JDInput from "@/components/JDInput";
 import ResumeUploader from "@/components/ResumeUploader";
 
 export default function AnalyzePage() {
-    
-    const router = useRouter();
-
+  const router = useRouter();
   const [jdText, setJdText] = useState("");
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
   return (
-    <main>
-      <h1 className="text-2xl font-semibold" style={{ color: "var(--accent)" }}>
-        Analyze
+    <main className="mx-auto max-w-5xl px-6 py-24 font-sans">
+      <h1 className="text-3xl font-semibold md:text-4xl" style={{ color: "var(--foreground)" }}>
+        Analyze your fit
       </h1>
-      <p className="mt-2 text-sm" style={{ color: "var(--muted)" }}>
-        Paste a job description and upload your resume to analyze the match.
+      <p className="mt-3 text-sm" style={{ color: "var(--muted)" }}>
+        Submit a job description and resume to see your match breakdown.
       </p>
 
       <div className="mt-6 space-y-6">
