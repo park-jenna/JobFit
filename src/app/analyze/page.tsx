@@ -27,48 +27,52 @@ export default function AnalyzePage() {
         <ResumeUploader file={resumeFile} onChange={setResumeFile} />
 
         <button
-            type="button"
-            className="inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium disabled:opacity-50"
-            style={{ backgroundColor: "var(--accent)", color: "var(--button-text)" }}
-            disabled={isLoading || jdText.trim().length === 0 || !resumeFile}
-            onClick={async () => {
-                if (!resumeFile) {
-                    setError("Please upload a resume file.");
-                    return;
-                }
+          type="button"
+          className="mt-6 inline-flex items-center justify-center rounded-2xl px-6 py-3 text-sm font-semibold disabled:opacity-50 transition-colors"
+          style={{ backgroundColor: "var(--accent)", color: "var(--button-text)" }}
+          disabled={isLoading || jdText.trim().length === 0 || !resumeFile}
+          onClick={async () => {
+            if (!resumeFile) {
+              setError("Please upload a resume file.");
+              return;
+            }
 
-                setError(null);
-                setIsLoading(true);
+            setError(null);
+            setIsLoading(true);
 
-                try {
-                    const formData = new FormData();
-                    formData.append("jdText", jdText);
-                    formData.append("resume", resumeFile);
+            try {
+              const formData = new FormData();
+              formData.append("jdText", jdText);
+              formData.append("resume", resumeFile);
 
-                    const res = await fetch("/api/analyze", {
-                        method: "POST",
-                        body: formData,
-                    });
+              const res = await fetch("/api/analyze", {
+                method: "POST",
+                body: formData,
+              });
 
-                    if (!res.ok) {
-                        throw new Error(`API error: ${res.status} ${res.statusText}`);
-                    }
+              if (!res.ok) {
+                throw new Error(`API error: ${res.status} ${res.statusText}`);
+              }
 
-                    const data = await res.json();
-                    sessionStorage.setItem("jobfit_result", JSON.stringify(data));
-                    router.push("/result")
-                } catch (err: any) {
-                    setError(err.message ?? "An unexpected error occurred.");
-                } finally {
-                    setIsLoading(false);
-                }
-            }}
-        >  
-            {isLoading ? "Analyzing..." : "Analyze"}
+              const data = await res.json();
+              sessionStorage.setItem("jobfit_result", JSON.stringify(data));
+              router.push("/result");
+            } catch (err: any) {
+              setError(err.message ?? "An unexpected error occurred.");
+            } finally {
+              setIsLoading(false);
+            }
+          }}
+        >
+          {isLoading ? "Analyzing..." : "Analyze"}
         </button>
-      </div>
 
-      
+        {error && (
+          <p className="mt-3 text-sm" style={{ color: "var(--accent)" }}>
+            {error}
+          </p>
+        )}
+      </div>
     </main>
   );
 }
