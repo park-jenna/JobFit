@@ -1,14 +1,5 @@
-import { openai } from "@/services/openaiClient"
-import { normalizeSkill } from "@/lib/weightedScore";
-
-
-export type WeightedSkill = {
-    name: string;
-    key: string;
-    category: "required" | "preferred";
-    importance: number; // 0.1 - 1.0
-    reason: string;
-};
+import { openai } from "@/services/openaiClient";
+import { normalizeSkill, type WeightedSkill } from "@/lib/weightedScore";
 
 // Clamp a number between min and max
 function clamp(n: number, min: number, max: number) {

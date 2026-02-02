@@ -3,13 +3,21 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
+/** Normalize skill list from API (string[] or { name: string }[]) */
+function toSkillNames(arr: unknown): string[] {
+  if (!Array.isArray(arr)) return [];
+  return arr
+    .map((x: unknown) => (typeof x === "string" ? x : (x as { name?: string })?.name ?? ""))
+    .filter(Boolean);
+}
+
 type AnalysisResult = {
   ok?: boolean;
   summary?: string;
   jdAnalysis?: {
-    requiredSkills: string[];
-    preferredSkills: string[];
-    level: string;
+    requiredSkills?: string[] | { name: string }[];
+    preferredSkills?: string[] | { name: string }[];
+    level?: string;
   };
   jdRequired?: string[];
   jdPreferred?: string[];
@@ -159,8 +167,8 @@ export default function ResultPage() {
     }
   }, []);
 
-  const required = result?.jdRequired ?? result?.jdAnalysis?.requiredSkills ?? [];
-  const preferred = result?.jdPreferred ?? result?.jdAnalysis?.preferredSkills ?? [];
+  const required = result?.jdRequired ?? toSkillNames(result?.jdAnalysis?.requiredSkills) ?? [];
+  const preferred = result?.jdPreferred ?? toSkillNames(result?.jdAnalysis?.preferredSkills) ?? [];
   const missingRequired = result?.missingSkills?.required ?? [];
   const missingPreferred = result?.missingSkills?.preferred ?? [];
 

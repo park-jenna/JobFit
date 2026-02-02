@@ -7,8 +7,6 @@ import { generateSummary } from "@/services/summary";
 import { createEmbedding } from "@/lib/embeddings";
 import { cosineSimilarity, semanticToPercent } from "@/lib/similarity";
 
-import { extractWeightedSkillsFromJD } from "@/services/jdWeighting";
-
 import {
     normalizeSkill,
     computeMissingSkills,
@@ -16,7 +14,7 @@ import {
     computeFinalMatchScore,
     computeImportanceWeightedScore,
 } from "@/lib/weightedScore";
-import type { SkillItem, skillGroup } from "@/lib/weightedScore";
+import type { SkillItem, skillGroup, WeightedSkill } from "@/lib/weightedScore";
 
 const pdfParse = require("pdf-parse/lib/pdf-parse.js");
 
@@ -52,34 +50,75 @@ function cleanJDSkills(skills: string[]) {
 
 type RawSkillGroup = {
     type: "any_of";
-    items: string[];
+    items: string[] | { name: string }[];
 };
-
-function normalizeGroups(groups: RawSkillGroup[]): RawSkillGroup[] {
-    return (groups ?? []).map((group) => ({
-        type: group.type,
-        items: Array.from(
-            new Set((group.items ?? []).map(normalizeSkill))
-        ),
-    }));
-}
 
 function toSkillItem(label: string): SkillItem {
     return { label, key: normalizeSkill(label) };
 }
 
-function normalizeGroupsToSkillItems(groups: RawSkillGroup[]): skillGroup[] {
-    return (groups ?? []).map((group) => ({
-        type: group.type,
-        items: Array.from(
-            new Map(
-                (group.items ?? []).map((label) => {
-                    const key = normalizeSkill(label);
-                    return [key, { label, key }];
-                })
-            ).values()
-        ),
-    }));
+function extractGroupItemNames(items: (string | { name: string })[]): string[] {
+    return (items ?? []).map((i) => (typeof i === "string" ? i : i.name));
+}
+
+function normalizeGroupsToSkillItems(
+    groups: RawSkillGroup[],
+    cleanFn: (names: string[]) => string[]
+): skillGroup[] {
+    return (groups ?? []).map((group) => {
+        const names = extractGroupItemNames(group.items ?? []);
+        const cleaned = cleanFn(names);
+        return {
+            type: "any_of" as const,
+            items: Array.from(
+                new Map(
+                    cleaned.map((name) => {
+                        const key = normalizeSkill(name);
+                        return [key, { label: name, key }];
+                    })
+                ).values()
+            ),
+        };
+    });
+}
+
+/** Build WeightedSkill[] from unified jdAnalysis for importance-weighted scoring */
+function buildWeightedSkillsFromJDAnalysis(jdAnalysis: {
+    requiredSkills: { name: string; importance: number }[];
+    preferredSkills: { name: string; importance: number }[];
+    requiredGroups: { type: string; items: { name: string; importance: number }[] }[];
+    preferredGroups: { type: string; items: { name: string; importance: number }[] }[];
+}): WeightedSkill[] {
+    const skillMap = new Map<string, WeightedSkill>();
+
+    const add = (name: string, importance: number, category: "required" | "preferred") => {
+        const key = normalizeSkill(name);
+        if (!key) return;
+        const imp = Math.max(0.1, Math.min(1, importance));
+        const existing = skillMap.get(key);
+        if (!existing || imp > existing.importance) {
+            skillMap.set(key, { name, key, category, importance: imp, reason: "" });
+        }
+    };
+
+    for (const s of jdAnalysis.requiredSkills ?? []) {
+        add(s.name, s.importance, "required");
+    }
+    for (const s of jdAnalysis.preferredSkills ?? []) {
+        add(s.name, s.importance, "preferred");
+    }
+    for (const g of jdAnalysis.requiredGroups ?? []) {
+        for (const item of g.items ?? []) {
+            add(item.name, item.importance, "required");
+        }
+    }
+    for (const g of jdAnalysis.preferredGroups ?? []) {
+        for (const item of g.items ?? []) {
+            add(item.name, item.importance, "preferred");
+        }
+    }
+
+    return Array.from(skillMap.values());
 }
 
 
@@ -135,12 +174,12 @@ export async function POST(req: Request) {
     // 2) AI summary
     const aiSummary = await generateSummary(jdText, resumeText);
 
-    // 3) Skill extraction through LLM)
-    const [jdAnalysis, resumeAnalysis, weightedSkills] = await Promise.all([
+    // 3) Skill extraction (single LLM call: jdAnalyzer returns skills + importance)
+    const [jdAnalysis, resumeAnalysis] = await Promise.all([
         extractSkillsFromJD(jdText),
         extractSkillsFromResume(resumeText),
-        extractWeightedSkillsFromJD(jdText),
-    ]); 
+    ]);
+    const weightedSkills = buildWeightedSkillsFromJDAnalysis(jdAnalysis);
 
     // 4) combine tools and concepts as resume skills + normalize
     const resumeSkillsRaw = [
@@ -161,15 +200,20 @@ export async function POST(req: Request) {
     const jdPreferredRaw = jdAnalysis.preferredSkills ?? [];
     const jdRequiredGroupsRaw = jdAnalysis.requiredGroups ?? [];
     const jdPreferredGroupsRaw = jdAnalysis.preferredGroups ?? [];
-    const jdRequired = cleanJDSkills(jdRequiredRaw);
-    const jdPreferred = cleanJDSkills(jdPreferredRaw);
-    const jdRequiredGroups = normalizeGroups(jdRequiredGroupsRaw);
-    const jdPreferredGroups = normalizeGroups(jdPreferredGroupsRaw);
+
+    const jdRequired = cleanJDSkills(jdRequiredRaw.map((s) => s.name));
+    const jdPreferred = cleanJDSkills(jdPreferredRaw.map((s) => s.name));
 
     const jdRequiredItems = jdRequired.map(toSkillItem);
     const jdPreferredItems = jdPreferred.map(toSkillItem);
-    const jdRequiredGroupItems = normalizeGroupsToSkillItems(jdRequiredGroupsRaw);
-    const jdPreferredGroupItems = normalizeGroupsToSkillItems(jdPreferredGroupsRaw);
+    const jdRequiredGroupItems = normalizeGroupsToSkillItems(
+        jdRequiredGroupsRaw,
+        cleanJDSkills
+    );
+    const jdPreferredGroupItems = normalizeGroupsToSkillItems(
+        jdPreferredGroupsRaw,
+        cleanJDSkills
+    );
 
     // 6) Missing Skills
     const missingRequired = computeMissingSkills(jdRequiredItems, resumeSkillKeys);
@@ -197,14 +241,21 @@ export async function POST(req: Request) {
     //      skill score weight: 50%
     const matchScore = computeFinalMatchScore({
         semanticScore,
-        // skillScore: weighted.finalScore,
         skillScore: Math.round(
             weighted.finalScore * 0.5 + importanceWeightedScore * 0.5
         ),
         semanticWeight: 0.5,
     });
 
-    //////////////////////////////////
+    const jdRequiredGroups = jdRequiredGroupItems.map((g) => ({
+        type: "any_of" as const,
+        items: g.items.map((i) => i.label),
+    }));
+    const jdPreferredGroups = jdPreferredGroupItems.map((g) => ({
+        type: "any_of" as const,
+        items: g.items.map((i) => i.label),
+    }));
+
     // debug log
     console.log("analyze result:", {
         jdAnalysis,
@@ -224,17 +275,16 @@ export async function POST(req: Request) {
         },
         aiSummary,
     });
-    //////////////////////////////////
 
     return NextResponse.json({
         ok: true,
-        __version: "route-2026-01-18-v2",
+        __version: "route-2026-02-02-v3-unified-jd",
         
         jdAnalysis,
         jdRequired,
         jdPreferred,
-        jdRequiredGroups: jdRequiredGroups,
-        jdPreferredGroups: jdPreferredGroups,
+        jdRequiredGroups,
+        jdPreferredGroups,
 
         resumeSkills,
 

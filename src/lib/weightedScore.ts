@@ -1,4 +1,10 @@
-import type { WeightedSkill } from "@/services/jdWeighting";
+export type WeightedSkill = {
+    name: string;
+    key: string;
+    category: "required" | "preferred";
+    importance: number;
+    reason: string;
+};
 
 export function normalizeSkill(skill: string): string {
     if (typeof skill !== "string") return "";
