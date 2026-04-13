@@ -1,1 +1,1 @@
-import { expect } from "vitest";
+export {};

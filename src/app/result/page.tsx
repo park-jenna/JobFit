@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 
 /** Normalize skill list from API (string[] or { name: string }[]) */
@@ -38,51 +38,6 @@ type AnalysisResult = {
   };
   semanticScore?: number;
   skillScore?: number;
-};
-
-const ScoreCard = ({ 
-  score, 
-  label, 
-  subtitle 
-}: { 
-  score?: number; 
-  label: string; 
-  subtitle: string;
-}) => {
-  const getScoreColor = (value?: number) => {
-    if (typeof value !== "number") return "text-stone-400";
-    if (value >= 70) return "text-emerald-600";
-    if (value >= 50) return "text-coral-600";
-    return "text-rose-600";
-  };
-
-  const getScoreBg = (value?: number) => {
-    if (typeof value !== "number") return "bg-stone-100";
-    if (value >= 70) return "bg-emerald-50";
-    if (value >= 50) return "bg-coral-50";
-    return "bg-rose-50";
-  };
-
-  const getScoreBorder = (value?: number) => {
-    if (typeof value !== "number") return "border-stone-200";
-    if (value >= 70) return "border-emerald-200";
-    if (value >= 50) return "border-coral-200";
-    return "border-rose-200";
-  };
-
-  return (
-    <div className={`rounded-2xl border-2 ${getScoreBorder(score)} ${getScoreBg(score)} p-6 transition-all hover:scale-105`}>
-      <div className="text-center">
-        <p className="text-xs font-semibold uppercase tracking-wider text-stone-600">
-          {label}
-        </p>
-        <p className={`mt-3 text-5xl font-bold ${getScoreColor(score)}`}>
-          {typeof score === "number" ? score : "--"}
-        </p>
-        <p className="mt-2 text-sm text-stone-500">{subtitle}</p>
-      </div>
-    </div>
-  );
 };
 
 const SkillBadge = ({ 
@@ -158,14 +113,18 @@ const CircularProgress = ({
 };
 
 export default function ResultPage() {
-  const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [result] = useState<AnalysisResult | null>(() => {
+    if (typeof window === "undefined") return null;
 
-  useEffect(() => {
     const raw = sessionStorage.getItem("jobfit_result");
-    if (raw) {
-      setResult(JSON.parse(raw));
+    if (!raw) return null;
+
+    try {
+      return JSON.parse(raw) as AnalysisResult;
+    } catch {
+      return null;
     }
-  }, []);
+  });
 
   const required = result?.jdRequired ?? toSkillNames(result?.jdAnalysis?.requiredSkills) ?? [];
   const preferred = result?.jdPreferred ?? toSkillNames(result?.jdAnalysis?.preferredSkills) ?? [];

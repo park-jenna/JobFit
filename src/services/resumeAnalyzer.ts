@@ -1,4 +1,5 @@
 import { openai } from "@/services/openaiClient";
+import { parseLlmJsonObject } from "@/lib/llmJson";
 
 type ResumeAnalysis = {
     tools: string[];
@@ -45,31 +46,17 @@ export async function extractSkillsFromResume(resumeText: string): Promise<Resum
     ${resumeText}
     `.trim();
 
-    try {
-        const res = await openai.chat.completions.create({
-            model: "gpt-4o-mini",
-            messages: [{ role: "user", content: prompt }],
-        });
-        const raw = res.choices[0].message.content ?? "{}";
+    const res = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [{ role: "user", content: prompt }],
+    });
+    const raw = res.choices[0].message.content ?? "{}";
+    const parsed = parseLlmJsonObject(raw, "Resume analyzer");
 
-        // Extract ```json ... ```
-        const cleaned = raw
-            .replace(/```json/g, "")
-            .replace(/```/g, "")
-            .trim();
-
-        const parsed = JSON.parse(cleaned);
-
-        return {
-            tools: Array.isArray(parsed.tools) ? parsed.tools : [],
-            concepts: Array.isArray(parsed.concepts) ? parsed.concepts : [],
-        };
-    } catch (error) {
-        console.error("OpenAI resume analyzer failed, falling back:", error);
-
-        return {
-            tools: [],
-            concepts: [],
-        };
-    }
+    return {
+        tools: Array.isArray(parsed.tools) ? parsed.tools.filter((tool): tool is string => typeof tool === "string") : [],
+        concepts: Array.isArray(parsed.concepts)
+            ? parsed.concepts.filter((concept): concept is string => typeof concept === "string")
+            : [],
+    };
 }

@@ -2,6 +2,7 @@ import { extractSkillsFromJD } from "@/services/jdAnalyzer";
 import { extractSkillsFromResume } from "@/services/resumeAnalyzer";
 import { NextResponse } from "next/server";
 import { generateSummary } from "@/services/summary";
+import pdfParse from "pdf-parse/lib/pdf-parse.js";
 
 // semantic similarity utils
 import { createEmbedding } from "@/lib/embeddings";
@@ -16,12 +17,8 @@ import {
 } from "@/lib/weightedScore";
 import type { SkillItem, skillGroup, WeightedSkill } from "@/lib/weightedScore";
 
-const pdfParse = require("pdf-parse/lib/pdf-parse.js");
-
-// Enable Node.js runtime for this route
 export const runtime = "nodejs";
 
-// clean JD skills by removing generic/junk skills
 function cleanJDSkills(skills: string[]) {
     const junk = new Set([
         "programming languages",
@@ -32,14 +29,13 @@ function cleanJDSkills(skills: string[]) {
         "frontend frameworks",
     ]);
 
-    // normalize and filter out junk skills
     const cleaned = skills
         .map((s) => s.replace(/^proficiency in\s+/i, "").trim())
         .map((s) => s.replace(/^experience with\s+/i, "").trim())
         .map((s) => s.replace(/^familiarity with\s+/i, "").trim())
         .map((s) => s.replace(/^knowledge of\s+/i, "").trim())
         .map((s) => s.replace(/^experience in\s+/i, "").trim())
-        .filter((s) => s.length >0)
+        .filter((s) => s.length > 0)
         .filter((s) => !junk.has(normalizeSkill(s)));
     
     const unique = Array.from(new Map(cleaned.map((s) => [normalizeSkill(s), s])).values());
@@ -82,7 +78,6 @@ function normalizeGroupsToSkillItems(
     });
 }
 
-/** Build WeightedSkill[] from unified jdAnalysis for importance-weighted scoring */
 function buildWeightedSkillsFromJDAnalysis(jdAnalysis: {
     requiredSkills: { name: string; importance: number }[];
     preferredSkills: { name: string; importance: number }[];
@@ -162,154 +157,118 @@ export async function POST(req: Request) {
             );
         }
 
-        // 1) embedding 기반 semantic similarity 계산
-    const[jdEmbedding, resumeEmbedding] = await Promise.all([
-        createEmbedding(jdText),
-        createEmbedding(resumeText)
-    ]);
+        const [jdEmbedding, resumeEmbedding, jdAnalysis, resumeAnalysis] = await Promise.all([
+            createEmbedding(jdText),
+            createEmbedding(resumeText),
+            extractSkillsFromJD(jdText),
+            extractSkillsFromResume(resumeText),
+        ]);
 
-    const semanticSim = cosineSimilarity(jdEmbedding, resumeEmbedding); // -1 to 1
-    const semanticScore = semanticToPercent(semanticSim); // 0 to 100
+        const semanticSim = cosineSimilarity(jdEmbedding, resumeEmbedding);
+        const semanticScore = semanticToPercent(semanticSim);
+        const weightedSkills = buildWeightedSkillsFromJDAnalysis(jdAnalysis);
 
-    // 2) AI summary
-    const aiSummary = await generateSummary(jdText, resumeText);
+        const resumeSkillsRaw = [
+            ...(resumeAnalysis.tools ?? []),
+            ...(resumeAnalysis.concepts ?? []),
+        ];
 
-    // 3) Skill extraction (single LLM call: jdAnalyzer returns skills + importance)
-    const [jdAnalysis, resumeAnalysis] = await Promise.all([
-        extractSkillsFromJD(jdText),
-        extractSkillsFromResume(resumeText),
-    ]);
-    const weightedSkills = buildWeightedSkillsFromJDAnalysis(jdAnalysis);
+        const resumeSkills = Array.from(
+            new Map(
+                resumeSkillsRaw.map((s) => [normalizeSkill(s), s])
+            ).values()
+        );
+        const resumeSkillKeys = resumeSkills.map((s) => normalizeSkill(s));
 
-    // 4) combine tools and concepts as resume skills + normalize
-    const resumeSkillsRaw = [
-        ...(resumeAnalysis.tools ?? []),
-        ...(resumeAnalysis.concepts ?? []),
-    ];
+        const jdRequiredRaw = jdAnalysis.requiredSkills ?? [];
+        const jdPreferredRaw = jdAnalysis.preferredSkills ?? [];
+        const jdRequiredGroupsRaw = jdAnalysis.requiredGroups ?? [];
+        const jdPreferredGroupsRaw = jdAnalysis.preferredGroups ?? [];
 
-    const resumeSkills = Array.from(
-        // key: normalized skill name, value: original skill name
-        new Map(
-            resumeSkillsRaw.map((s) => [normalizeSkill(s), s])
-        ).values()
-    );
-    const resumeSkillKeys = resumeSkills.map((s) => normalizeSkill(s));
+        const jdRequired = cleanJDSkills(jdRequiredRaw.map((s) => s.name));
+        const jdPreferred = cleanJDSkills(jdPreferredRaw.map((s) => s.name));
 
-    // 5) clean JD required/preferred skills
-    const jdRequiredRaw = jdAnalysis.requiredSkills ?? [];
-    const jdPreferredRaw = jdAnalysis.preferredSkills ?? [];
-    const jdRequiredGroupsRaw = jdAnalysis.requiredGroups ?? [];
-    const jdPreferredGroupsRaw = jdAnalysis.preferredGroups ?? [];
+        const jdRequiredItems = jdRequired.map(toSkillItem);
+        const jdPreferredItems = jdPreferred.map(toSkillItem);
+        const jdRequiredGroupItems = normalizeGroupsToSkillItems(
+            jdRequiredGroupsRaw,
+            cleanJDSkills
+        );
+        const jdPreferredGroupItems = normalizeGroupsToSkillItems(
+            jdPreferredGroupsRaw,
+            cleanJDSkills
+        );
 
-    const jdRequired = cleanJDSkills(jdRequiredRaw.map((s) => s.name));
-    const jdPreferred = cleanJDSkills(jdPreferredRaw.map((s) => s.name));
+        const missingRequired = computeMissingSkills(jdRequiredItems, resumeSkillKeys);
+        const missingPreferred = computeMissingSkills(jdPreferredItems, resumeSkillKeys);
 
-    const jdRequiredItems = jdRequired.map(toSkillItem);
-    const jdPreferredItems = jdPreferred.map(toSkillItem);
-    const jdRequiredGroupItems = normalizeGroupsToSkillItems(
-        jdRequiredGroupsRaw,
-        cleanJDSkills
-    );
-    const jdPreferredGroupItems = normalizeGroupsToSkillItems(
-        jdPreferredGroupsRaw,
-        cleanJDSkills
-    );
+        const weighted = computeWeightedSkillScore({
+            required: jdRequiredItems,
+            preferred: jdPreferredItems,
+            requiredGroups: jdRequiredGroupItems,
+            preferredGroups: jdPreferredGroupItems,
+            resumeSkillKeys,
+            requiredWeight: 0.9,
+        });
 
-    // 6) Missing Skills
-    const missingRequired = computeMissingSkills(jdRequiredItems, resumeSkillKeys);
-    const missingPreferred = computeMissingSkills(jdPreferredItems, resumeSkillKeys);
+        const importanceWeightedScore = computeImportanceWeightedScore(
+            weightedSkills,
+            resumeSkillKeys
+        );
 
-    // 7) Weighted Skill Score
-    const weighted = computeWeightedSkillScore({
-        required: jdRequiredItems,
-        preferred: jdPreferredItems,
-        requiredGroups: jdRequiredGroupItems,
-        preferredGroups: jdPreferredGroupItems,
-        resumeSkillKeys,
-        requiredWeight: 0.9, // 80% weight to required skills
-    });
+        const matchScore = computeFinalMatchScore({
+            semanticScore,
+            skillScore: Math.round(
+                weighted.finalScore * 0.5 + importanceWeightedScore * 0.5
+            ),
+            semanticWeight: 0.5,
+        });
 
-    // compute weighted skill score 
-    const importanceWeightedScore = computeImportanceWeightedScore(
-        weightedSkills,
-        resumeSkillKeys
-    );
+        const aiSummary = await generateSummary(jdText, resumeText);
 
-    // 8) Final Match Score
-    //     weights: 
-    //      semantic score weight: 50%
-    //      skill score weight: 50%
-    const matchScore = computeFinalMatchScore({
-        semanticScore,
-        skillScore: Math.round(
-            weighted.finalScore * 0.5 + importanceWeightedScore * 0.5
-        ),
-        semanticWeight: 0.5,
-    });
+        const jdRequiredGroups = jdRequiredGroupItems.map((g) => ({
+            type: "any_of" as const,
+            items: g.items.map((i) => i.label),
+        }));
+        const jdPreferredGroups = jdPreferredGroupItems.map((g) => ({
+            type: "any_of" as const,
+            items: g.items.map((i) => i.label),
+        }));
 
-    const jdRequiredGroups = jdRequiredGroupItems.map((g) => ({
-        type: "any_of" as const,
-        items: g.items.map((i) => i.label),
-    }));
-    const jdPreferredGroups = jdPreferredGroupItems.map((g) => ({
-        type: "any_of" as const,
-        items: g.items.map((i) => i.label),
-    }));
+        return NextResponse.json({
+            ok: true,
+            __version: "route-2026-04-13-resume-ready",
 
-    // debug log
-    console.log("analyze result:", {
-        jdAnalysis,
-        jdRequired,
-        jdPreferred,
-        jdRequiredGroups,
-        jdPreferredGroups,
-        resumeSkills,
-        semanticScore,
-        skillScore: weighted.finalScore,
-        matchScore,
-        missingRequired,
-        missingPreferred,
-        scoreBreakdown: {
-            requiredScore: weighted.requiredScore,
-            preferredScore: weighted.preferredScore,
-        },
-        aiSummary,
-    });
+            jdAnalysis,
+            jdRequired,
+            jdPreferred,
+            jdRequiredGroups,
+            jdPreferredGroups,
 
-    return NextResponse.json({
-        ok: true,
-        __version: "route-2026-02-02-v3-unified-jd",
-        
-        jdAnalysis,
-        jdRequired,
-        jdPreferred,
-        jdRequiredGroups,
-        jdPreferredGroups,
+            resumeSkills,
 
-        resumeSkills,
+            semanticScore,
+            skillScore: weighted.finalScore,
+            matchScore,
 
-        semanticScore,
-        skillScore: weighted.finalScore,
-        matchScore,
+            missingSkills: {
+                required: missingRequired,
+                preferred: missingPreferred,
+            },
 
-        missingSkills: {
-            required: missingRequired,
-            preferred: missingPreferred,
-        },
-        
-        scoreBreakdown: {
-            requiredScore: weighted.requiredScore,
-            preferredScore: weighted.preferredScore,
-        },
+            scoreBreakdown: {
+                requiredScore: weighted.requiredScore,
+                preferredScore: weighted.preferredScore,
+            },
 
-        aiSummary: {
-            strengths: aiSummary.strengths,
-            gaps: aiSummary.gaps,
-            overallFit: aiSummary.overallFit,
-        },
+            aiSummary: {
+                strengths: aiSummary.strengths,
+                gaps: aiSummary.gaps,
+                overallFit: aiSummary.overallFit,
+            },
 
-        summary: `Received JD (${jdText.length} chars). Extracted resume text length: ${resumeText.length} chars.`,
-    });
+            summary: `Received JD (${jdText.length} chars). Extracted resume text length: ${resumeText.length} chars.`,
+        });
     } catch (err) {
         console.error("Analyze route error:", err);
         return NextResponse.json(

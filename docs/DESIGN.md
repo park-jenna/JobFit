@@ -98,11 +98,10 @@ Not all skills in a JD are equally important. JobFit assigns importance (0–1) 
 - linguistic cues (“must”, “required”, “preferred”)
 - position in the JD (e.g. first 20% weighted higher)
 - frequency
-- contextual cues (e.g. “frontend role” → React ↑)
 
 **Why it matters:** It prevents “nice-to-have” skills from dragging down the score and highlights what truly matters.
 
-**Implementation:** Required vs preferred skill match is combined with 90% weight on required and 10% on preferred; this is then blended with importance-weighted coverage.
+**Implementation:** Required vs preferred skill match is combined with 90% weight on required and 10% on preferred when both buckets exist. If a JD only exposes one bucket, the score uses that bucket directly. The coverage score is then blended with importance-weighted coverage for the final match score.
 
 ### LLM-Generated Summary
 
@@ -113,7 +112,7 @@ The system produces structured output (e.g. JSON) with:
 - gaps
 - overall fit (short phrase)
 
-LLMs are used after scoring, not as the sole decision-maker.
+The summary LLM call runs after scoring succeeds, but it uses only the JD and resume text. LLMs are not the sole decision-maker; numeric scoring remains separate.
 
 ### Scoring System
 

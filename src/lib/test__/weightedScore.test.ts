@@ -6,8 +6,9 @@ import {
     computeMissingSkills,
     computeWeightedSkillScore,
     computeFinalMatchScore,
+    computeImportanceWeightedScore,
 } from "@/lib/weightedScore";
-import type { skillGroup } from "@/lib/weightedScore";
+import type { skillGroup, WeightedSkill } from "@/lib/weightedScore";
 
 describe ("normalizeSkill", () => {
     it("normalizes casing, punctuation, and spcaing", () => {
@@ -126,6 +127,57 @@ describe("computeWeightedSkillScore", () => {
         expect(result.finalScore).toBe(100);
     });
 
+    it("uses the required score directly when no preferred skills exist", () => {
+        const required = [
+            { label: "React", key: "react" },
+            { label: "TypeScript", key: "typescript" },
+        ];
+
+        const result = computeWeightedSkillScore({
+            required,
+            preferred: [],
+            resumeSkillKeys: ["react", "typescript"],
+            requiredWeight: 0.9,
+        });
+
+        expect(result.requiredScore).toBe(100);
+        expect(result.preferredScore).toBe(0);
+        expect(result.finalScore).toBe(100);
+    });
+
+    it("uses the preferred score directly when no required skills exist", () => {
+        const preferred = [
+            { label: "AWS", key: "amazon web services" },
+            { label: "Kubernetes", key: "kubernetes" },
+        ];
+
+        const result = computeWeightedSkillScore({
+            required: [],
+            preferred,
+            resumeSkillKeys: ["kubernetes"],
+            requiredWeight: 0.9,
+        });
+
+        expect(result.requiredScore).toBe(0);
+        expect(result.preferredScore).toBe(50);
+        expect(result.finalScore).toBe(50);
+    });
+
+    it("returns 0 when no required or preferred skill units exist", () => {
+        const result = computeWeightedSkillScore({
+            required: [],
+            preferred: [],
+            requiredGroups: [],
+            preferredGroups: [],
+            resumeSkillKeys: ["react"],
+            requiredWeight: 0.9,
+        });
+
+        expect(result.requiredScore).toBe(0);
+        expect(result.preferredScore).toBe(0);
+        expect(result.finalScore).toBe(0);
+    });
+
 });
 
 describe("computeFinalMatchScore", () => {
@@ -148,5 +200,32 @@ describe("computeFinalMatchScore", () => {
                 skillScore: 60,
             })
         ).toBe(70);
+    });
+});
+
+describe("computeImportanceWeightedScore", () => {
+    it("weights matched skills by importance", () => {
+        const jdSkills: WeightedSkill[] = [
+            {
+                name: "React",
+                key: "react",
+                category: "required",
+                importance: 0.8,
+                reason: "",
+            },
+            {
+                name: "AWS",
+                key: "amazon web services",
+                category: "preferred",
+                importance: 0.2,
+                reason: "",
+            },
+        ];
+
+        expect(computeImportanceWeightedScore(jdSkills, ["react"])).toBe(80);
+    });
+
+    it("returns 0 when there are no weighted skills", () => {
+        expect(computeImportanceWeightedScore([], ["react"])).toBe(0);
     });
 });

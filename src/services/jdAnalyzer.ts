@@ -1,19 +1,28 @@
 import { openai } from "@/services/openaiClient";
+import { parseLlmJsonObject } from "@/lib/llmJson";
 
 export type SkillWithImportance = { name: string; importance: number };
 export type SkillGroupItem = { name: string; importance: number };
 
 const DEFAULT_IMPORTANCE = 0.5;
 
-function toSkillWithImportance(item: string | SkillWithImportance): SkillWithImportance {
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function toSkillWithImportance(item: unknown): SkillWithImportance {
     if (typeof item === "string") {
         return { name: item, importance: DEFAULT_IMPORTANCE };
     }
+    if (!isRecord(item)) {
+        return { name: "", importance: DEFAULT_IMPORTANCE };
+    }
+
     const imp = typeof item.importance === "number" ? Math.max(0.1, Math.min(1, item.importance)) : DEFAULT_IMPORTANCE;
     return { name: String(item.name ?? "").trim(), importance: imp };
 }
 
-function toGroupItems(items: (string | SkillGroupItem)[]): SkillGroupItem[] {
+function toGroupItems(items: unknown[]): SkillGroupItem[] {
     return (items ?? []).map((i) =>
         typeof i === "string" ? { name: i, importance: DEFAULT_IMPORTANCE } : toSkillWithImportance(i)
     );
@@ -29,11 +38,11 @@ function normalizeJDAnalysis(raw: unknown): JDAnalysis {
     return {
         requiredSkills: req.map(toSkillWithImportance).filter((s) => s.name),
         preferredSkills: pref.map(toSkillWithImportance).filter((s) => s.name),
-        requiredGroups: reqGroups.map((g: Record<string, unknown>) => ({
+        requiredGroups: reqGroups.filter(isRecord).map((g) => ({
             type: "any_of" as const,
             items: toGroupItems(Array.isArray(g.items) ? g.items : []),
         })),
-        preferredGroups: prefGroups.map((g: Record<string, unknown>) => ({
+        preferredGroups: prefGroups.filter(isRecord).map((g) => ({
             type: "any_of" as const,
             items: toGroupItems(Array.isArray(g.items) ? g.items : []),
         })),
@@ -106,34 +115,12 @@ export async function extractSkillsFromJD(jdText: string): Promise<JDAnalysis> {
     ${jdText}
     `.trim();
 
-    try {
-        const res = await openai.chat.completions.create({
+    const res = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         temperature: 0,
         messages: [{ role: "user", content: prompt }],
     });
     const raw = res.choices[0].message.content || "{}";
-
-    //  extract ```json ... ``` 
-    const cleaned = raw
-        .trim()
-        .replace(/```json\s*/, "")
-        .replace(/^```\s*/i, "")
-        .replace(/```$/i, "")
-        .trim();
-
-    const parsed = JSON.parse(cleaned);
+    const parsed = parseLlmJsonObject(raw, "JD analyzer");
     return normalizeJDAnalysis(parsed);
-
-    } catch (error) {
-        console.error("OpenAI JD analyzer failed, falling back:", error);
-
-        return normalizeJDAnalysis({
-            requiredSkills: [],
-            preferredSkills: [],
-            requiredGroups: [],
-            preferredGroups: [],
-            level: "unknown",
-        });
-    }
 }

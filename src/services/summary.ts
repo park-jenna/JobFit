@@ -1,4 +1,5 @@
 import { openai } from "@/services/openaiClient";
+import { parseLlmJsonObject } from "@/lib/llmJson";
 
 export type aiSummaryResult = {
     strengths: string[];
@@ -56,18 +57,15 @@ export async function generateSummary (
         });
 
         const raw = res.choices[0].message.content ?? "{}";
-
-        // Extract ```json ... ```
-        const cleaned = raw
-            .replace(/```json/g, "")
-            .replace(/```/g, "")
-            .trim();
-
-        const parsed = JSON.parse(cleaned);
+        const parsed = parseLlmJsonObject(raw, "Summary generator");
 
         return {
-            strengths: Array.isArray(parsed.strengths) ? parsed.strengths : [],
-            gaps: Array.isArray(parsed.gaps) ? parsed.gaps : [],
+            strengths: Array.isArray(parsed.strengths)
+                ? parsed.strengths.filter((strength): strength is string => typeof strength === "string")
+                : [],
+            gaps: Array.isArray(parsed.gaps)
+                ? parsed.gaps.filter((gap): gap is string => typeof gap === "string")
+                : [],
             overallFit: typeof parsed.overallFit === "string" ? parsed.overallFit : "",
         };
     } catch (error) {

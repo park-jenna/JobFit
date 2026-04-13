@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans, Space_Mono } from "next/font/google";
+import Link from "next/link";
 import "./globals.css";
 
 const jakarta = Plus_Jakarta_Sans({
@@ -34,37 +35,37 @@ export default function RootLayout({
         <header className="sticky top-0 z-50 bg-transparent backdrop-blur-md">
           <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
             {/* Logo - Text Only */}
-            <a href="/" className="group">
+            <Link href="/" className="group">
               <span className="text-2xl font-bold bg-gradient-to-r from-coral-500 to-rose-500 bg-clip-text text-transparent transition-opacity hover:opacity-80">JobFit</span>
-            </a>
+            </Link>
 
             {/* Navigation */}
             <nav className="hidden items-center gap-10 md:flex">
-              <a
+              <Link
                 href="/analyze"
                 className="text-sm font-medium text-stone-700 transition-colors hover:text-coral-600"
               >
                 Analyze
-              </a>
-              <a
+              </Link>
+              <Link
                 href="/result"
                 className="text-sm font-medium text-stone-700 transition-colors hover:text-coral-600"
               >
                 Results
-              </a>
-              <a
+              </Link>
+              <Link
                 href="/analyze"
                 className="rounded-full bg-gradient-to-r from-coral-500 to-rose-500 px-5 py-2.5 text-sm font-semibold text-white transition-all hover:shadow-lg hover:scale-105"
               >
                 Get Started
-              </a>
+              </Link>
             </nav>
-            <a
+            <Link
               href="/analyze"
               className="rounded-full bg-coral-500 px-4 py-2 text-xs font-semibold text-white transition-all hover:bg-coral-600 md:hidden"
             >
               Start
-            </a>
+            </Link>
           </div>
         </header>
 
@@ -94,19 +95,19 @@ export default function RootLayout({
                 </h3>
                 <ul className="space-y-2 text-sm text-stone-600">
                   <li>
-                    <a href="/" className="transition-colors hover:text-coral-600">
+                    <Link href="/" className="transition-colors hover:text-coral-600">
                       Home
-                    </a>
+                    </Link>
                   </li>
                   <li>
-                    <a href="/analyze" className="transition-colors hover:text-coral-600">
+                    <Link href="/analyze" className="transition-colors hover:text-coral-600">
                       Analyze
-                    </a>
+                    </Link>
                   </li>
                   <li>
-                    <a href="/result" className="transition-colors hover:text-coral-600">
+                    <Link href="/result" className="transition-colors hover:text-coral-600">
                       Sample Results
-                    </a>
+                    </Link>
                   </li>
                 </ul>
               </div>

@@ -190,7 +190,7 @@ export default function Home() {
             Key Features
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-stone-600">
-            What you'll get from the analysis
+            What you&apos;ll get from the analysis
           </p>
         </div>
 
@@ -274,11 +274,11 @@ export default function Home() {
                   <div className="space-y-2 text-sm">
                     <div>
                       <span className="font-semibold text-stone-700">Job Description:</span>
-                      <span className="text-stone-600"> "React experience required"</span>
+                      <span className="text-stone-600"> &quot;React experience required&quot;</span>
                     </div>
                     <div>
                       <span className="font-semibold text-stone-700">Your Resume:</span>
-                      <span className="text-stone-600"> "Built SPAs with modern frontend frameworks"</span>
+                      <span className="text-stone-600"> &quot;Built SPAs with modern frontend frameworks&quot;</span>
                     </div>
                     <p className="mt-2 text-coral-700">
                       ✓ Semantic matching captures this alignment even without exact keywords
@@ -330,8 +330,8 @@ export default function Home() {
                   <div className="rounded-lg border border-stone-200 bg-white p-4">
                     <p className="text-sm font-semibold text-stone-900 mb-2">Limitation:</p>
                     <p className="text-sm text-stone-700">
-                      While powerful for conceptual matching, embeddings alone don't indicate which specific skills are missing. 
-                      That's why we combine this with explicit skill extraction.
+                      While powerful for conceptual matching, embeddings alone don&apos;t indicate which specific skills are missing.
+                      That&apos;s why we combine this with explicit skill extraction.
                     </p>
                   </div>
                 </div>
@@ -374,7 +374,7 @@ export default function Home() {
                     <ul className="space-y-1 text-sm text-stone-700">
                       <li>• Job description phrasing varies wildly across companies</li>
                       <li>• Skills appear in responsibilities, qualifications, or culture sections</li>
-                      <li>• LLMs understand context (e.g., "frontend-focused role" → React/TypeScript implied)</li>
+                      <li>• LLMs understand context (e.g., &quot;frontend-focused role&quot; → React/TypeScript implied)</li>
                     </ul>
                   </div>
                   <div className="rounded-lg border border-stone-200 bg-white p-4">
@@ -383,7 +383,7 @@ export default function Home() {
                       Not all skills are equally important. The system assigns weights based on:
                     </p>
                     <ul className="space-y-1 text-sm text-stone-700">
-                      <li>• Linguistic cues ("must", "required" vs "preferred", "nice-to-have")</li>
+                      <li>• Linguistic cues (&quot;must&quot;, &quot;required&quot; vs &quot;preferred&quot;, &quot;nice-to-have&quot;)</li>
                       <li>• Position in job description (earlier = more important)</li>
                       <li>• Frequency and emphasis</li>
                     </ul>
@@ -433,7 +433,7 @@ export default function Home() {
                   <div className="rounded-lg bg-stone-100 p-4">
                     <p className="text-sm font-semibold text-stone-900 mb-2">Why multiple scores?</p>
                     <p className="text-sm text-stone-700">
-                      A single opaque number doesn't explain why you're a good or poor match. 
+                      A single opaque number doesn&apos;t explain why you&apos;re a good or poor match.
                       Breaking down the score into interpretable components helps you understand exactly where you stand 
                       and what to improve.
                     </p>

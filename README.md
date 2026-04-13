@@ -47,7 +47,7 @@ Instead of keyword overlap alone, JobFit combines semantic similarity (embedding
 ### 5. Structured LLM summary
 
 - In the same `/api/analyze` request, an LLM returns **strengths**, **gaps**, and a short **overall fit** line (JSON-shaped for the UI).
-- In the current implementation this summary is generated **before** the JD/resume skill extraction and numeric skill scores run, so it does not read the final numbers—only the JD and resume text.
+- The summary runs after the scoring pipeline succeeds. It uses the JD and resume text only, while numeric scoring remains separate and deterministic.
 
 ---
 
@@ -75,6 +75,12 @@ Instead of keyword overlap alone, JobFit combines semantic similarity (embedding
 
 ---
 
+## Privacy Note
+
+Uploaded resume text and pasted job descriptions are sent to OpenAI for analysis. Results are stored only in the browser session via `sessionStorage`; JobFit does not currently persist analyses or create shareable reports.
+
+---
+
 ## Project Structure
 
 ```
@@ -85,9 +91,9 @@ src/
 │   ├── result/                 # Result visualization UI
 │   ├── sample/                 # Loads a demo result into sessionStorage
 │   ├── layout.tsx, page.tsx, globals.css
-├── components/                 # e.g. JDInput, ResumeUploader
 ├── lib/
 │   ├── embeddings.ts           # OpenAI embedding helpers
+│   ├── llmJson.ts              # Shared JSON parsing for LLM responses
 │   ├── similarity.ts           # Cosine similarity, 0–100 normalization
 │   └── weightedScore.ts        # Scoring & required/preferred weighting
 ├── services/
@@ -96,8 +102,6 @@ src/
 │   ├── resumeAnalyzer.ts       # Resume tools/concepts (LLM)
 │   └── summary.ts              # Strengths / gaps / overall fit (LLM)
 ```
-
-`jdWeighting.ts` is an alternate, unused JD-weighting experiment and is not wired into the route.
 
 ---
 
@@ -121,6 +125,13 @@ src/
 
 4. **Analyze:** Upload a resume (PDF) and paste a technical job description on `/analyze`; view results on `/result`. Results are kept in session only (no persistence yet). **`/sample`** can seed the result page with demo data for UI checks.
 
+5. Run checks:
+   ```bash
+   npm test
+   npm run lint
+   npm run build
+   ```
+
 ---
 
 ## To Be Added
@@ -130,4 +141,3 @@ src/
 - Interactive skill coverage visualizations
 - Result persistence / shareable links (v1.5)
 - (Optional) Caching embeddings for faster re-runs
-

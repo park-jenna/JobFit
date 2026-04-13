@@ -43,7 +43,7 @@ export default function AnalyzePage() {
       } else {
         setError(result.error || "Analysis failed. Please try again.");
       }
-    } catch (err) {
+    } catch {
       setError("Something went wrong. Please try again.");
     } finally {
       setIsAnalyzing(false);
@@ -61,6 +61,9 @@ export default function AnalyzePage() {
         </h1>
         <p className="mx-auto mt-4 max-w-2xl text-lg text-stone-600">
           Upload your resume and paste the job description to see how well you align.
+        </p>
+        <p className="mx-auto mt-3 max-w-2xl text-sm text-stone-500">
+          Your resume and job description are sent to OpenAI for analysis. Results stay in this browser session only.
         </p>
       </div>
 
